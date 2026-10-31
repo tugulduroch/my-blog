@@ -1,5 +1,6 @@
 import Link from "next/link";
-import type { Post } from "@/lib/posts";
+import { readingTime, type Post } from "@/lib/posts";
+import { formatDate } from "@/lib/format";
 
 export default function PostTimeline({ posts }: { posts: Post[] }) {
   if (posts.length === 0) return <p className="empty">Одоогоор бичвэр алга.</p>;
@@ -18,15 +19,20 @@ export default function PostTimeline({ posts }: { posts: Post[] }) {
           <div>
             {items.map((p) => (
               <article key={p.slug} className="post-item">
-                <h3>
-                  <Link href={`/writing/${p.slug}`}>{p.title}</Link>
-                </h3>
-                {p.description && <p>{p.description}</p>}
-                <Link href={`/writing/${p.slug}`} className="more">
-                  Унших
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m9 18 6-6-6-6" />
-                  </svg>
+                <Link href={`/writing/${p.slug}`} className="post-link">
+                  <div className="post-text">
+                    <h3>{p.title}</h3>
+                    {p.description && <p>{p.description}</p>}
+                    <div className="post-meta">
+                      <time dateTime={p.date}>{formatDate(p.date)}</time>
+                      <span>·</span>
+                      <span>{readingTime(p.content)} мин унших</span>
+                    </div>
+                  </div>
+                  {p.cover && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img className="post-thumb" src={p.cover} alt="" loading="lazy" />
+                  )}
                 </Link>
               </article>
             ))}
