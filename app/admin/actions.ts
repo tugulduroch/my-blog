@@ -3,8 +3,10 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { checkPassword, endSession, isAdmin, startSession } from "@/lib/auth";
-import { createPost, deletePost, slugify, updatePost, uploadImage, type Post } from "@/lib/posts";
-import { POSTS_TAG } from "@/lib/queries";
+import { createPost, deletePost, slugify, updatePost, type Post } from "@/lib/posts";
+import { createProject, deleteProject, updateProject, type Project } from "@/lib/projects";
+import { POSTS_TAG, PROJECTS_TAG } from "@/lib/queries";
+import { uploadImage } from "@/lib/store";
 
 export type FormState = { error?: string };
 
@@ -22,20 +24,26 @@ export async function logout() {
 
 function refresh() {
   revalidateTag(POSTS_TAG);
+  revalidateTag(PROJECTS_TAG);
   revalidatePath("/", "layout");
 }
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+const parseTags = (value: string) =>
+  value
+    .split(",")
+    .map((t) => t.trim().replace(/^#/, ""))
+    .filter(Boolean);
 
 function parsePost(formData: FormData): Post | string {
   const get = (k: string) => String(formData.get(k) ?? "").trim();
   const title = get("title");
   const content = get("content");
-  const date = get("date") || new Date().toISOString().slice(0, 10);
+  const date = get("date") || today();
   const slug = slugify(get("slug") || title);
   const cover = get("cover");
-  const tags = get("tags")
-    .split(",")
-    .map((t) => t.trim().replace(/^#/, ""))
-    .filter(Boolean);
+  const tags = parseTags(get("tags"));
 
   if (!title) return "Гарчиг оруулна уу.";
   if (!content) return "Агуулга оруулна уу.";
@@ -45,38 +53,83 @@ function parsePost(formData: FormData): Post | string {
   return { slug, title, description: get("description"), content, date, cover: cover || undefined, tags };
 }
 
-async function save(formData: FormData, write: (post: Post) => Promise<void>): Promise<FormState> {
+function parseProject(formData: FormData): Project | string {
+  const get = (k: string) => String(formData.get(k) ?? "").trim();
+  const title = get("title");
+  const date = get("date") || today();
+  const image = get("image");
+  let url = get("url");
+  if (url && !/^https?:\/\//i.test(url)) url = `https://${url}`;
+
+  if (!title) return "Нэр оруулна уу.";
+  if (url && !URL.canParse(url)) return "Холбоос буруу байна.";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return "Огноо буруу байна.";
+
+  return {
+    // Төслийн slug зөвхөн хадгалахад хэрэглэгдэх тул нэрээс автоматаар үүсгэнэ.
+    slug: slugify(title) || `project-${Date.now().toString(36)}`,
+    title,
+    description: get("description"),
+    date,
+    url: url || undefined,
+    image: image || undefined,
+    tags: parseTags(get("tags")),
+  };
+}
+
+async function save<T extends { slug: string }>(
+  item: T | string,
+  write: (item: T) => Promise<void>,
+  existsError: (slug: string) => string,
+  back: string,
+): Promise<FormState> {
   if (!(await isAdmin())) redirect("/admin/login");
-  const post = parsePost(formData);
-  if (typeof post === "string") return { error: post };
+  if (typeof item === "string") return { error: item };
 
   try {
-    await write(post);
+    await write(item);
   } catch (err) {
-    if (err instanceof Error && err.message === "slug-exists") {
-      return { error: `"${post.slug}" slug-тай бичвэр аль хэдийн байна. Өөр slug оруулна уу.` };
-    }
+    if (err instanceof Error && err.message === "slug-exists") return { error: existsError(item.slug) };
     console.error(err);
     return { error: "Хадгалах үед алдаа гарлаа." };
   }
 
   refresh();
-  redirect("/admin");
+  redirect(back);
 }
 
+const postExists = (slug: string) => `"${slug}" slug-тай бичвэр аль хэдийн байна. Өөр slug оруулна уу.`;
+const projectExists = () => "Ийм нэртэй төсөл аль хэдийн байна. Өөр нэр оруулна уу.";
+
 export async function addPost(_: FormState, formData: FormData) {
-  return save(formData, createPost);
+  return save(parsePost(formData), createPost, postExists, "/admin");
 }
 
 export async function editPost(_: FormState, formData: FormData) {
   const original = String(formData.get("original") ?? "");
-  return save(formData, (post) => updatePost(original, post));
+  return save(parsePost(formData), (post) => updatePost(original, post), postExists, "/admin");
 }
 
 export async function removePost(formData: FormData) {
   if (!(await isAdmin())) redirect("/admin/login");
   const slug = String(formData.get("slug") ?? "");
   if (slug) await deletePost(slug);
+  refresh();
+}
+
+export async function addProject(_: FormState, formData: FormData) {
+  return save(parseProject(formData), createProject, projectExists, "/admin/projects");
+}
+
+export async function editProject(_: FormState, formData: FormData) {
+  const original = String(formData.get("original") ?? "");
+  return save(parseProject(formData), (project) => updateProject(original, project), projectExists, "/admin/projects");
+}
+
+export async function removeProject(formData: FormData) {
+  if (!(await isAdmin())) redirect("/admin/login");
+  const slug = String(formData.get("slug") ?? "");
+  if (slug) await deleteProject(slug);
   refresh();
 }
 

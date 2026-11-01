@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import { removePost } from "./actions";
+import { removePost, removeProject } from "./actions";
 
 function Submit() {
   const { pending } = useFormStatus();
@@ -12,12 +12,14 @@ function Submit() {
   );
 }
 
-export default function DeleteButton({ slug, title }: { slug: string; title: string }) {
+type Props = { slug: string; title: string; kind?: "post" | "project" };
+
+export default function DeleteButton({ slug, title, kind = "post" }: Props) {
   return (
     <form
-      action={removePost}
+      action={kind === "project" ? removeProject : removePost}
       onSubmit={(e) => {
-        if (!confirm(`"${title}" бичвэрийг устгах уу?`)) e.preventDefault();
+        if (!confirm(`"${title}" ${kind === "project" ? "төслийг" : "бичвэрийг"} устгах уу?`)) e.preventDefault();
       }}
     >
       <input type="hidden" name="slug" value={slug} />

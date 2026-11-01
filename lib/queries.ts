@@ -1,12 +1,19 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { readPosts, type Post } from "./posts";
+import { readProjects } from "./projects";
 
 export const POSTS_TAG = "posts";
+export const PROJECTS_TAG = "projects";
 
-// Бичвэрүүдийг кэшилнэ; админаас өөрчлөх бүрт revalidateTag(POSTS_TAG) дуудагдана.
+// Бичвэр, төслүүдийг кэшилнэ; админаас өөрчлөх бүрт revalidateTag дуудагдана.
 export const getPosts = unstable_cache(readPosts, ["posts-v2"], {
   tags: [POSTS_TAG],
+  revalidate: 3600,
+});
+
+export const getProjects = unstable_cache(readProjects, ["projects-v1"], {
+  tags: [PROJECTS_TAG],
   revalidate: 3600,
 });
 

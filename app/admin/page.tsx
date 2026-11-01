@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 import { readPosts } from "@/lib/posts";
 import { formatDate } from "@/lib/format";
-import { logout } from "./actions";
+import AdminHeader from "./AdminHeader";
 import DeleteButton from "./DeleteButton";
 
 export const dynamic = "force-dynamic";
@@ -16,20 +16,7 @@ export default async function AdminPage() {
 
   return (
     <main className="container">
-      <div className="admin-head">
-        <div>
-          <h1>Бичвэрүүд</h1>
-          <span className="muted">Нийт {posts.length}</span>
-        </div>
-        <div className="actions">
-          <form action={logout}>
-            <button className="btn ghost">Гарах</button>
-          </form>
-          <Link href="/admin/new" className="btn primary">
-            + Шинэ бичвэр
-          </Link>
-        </div>
-      </div>
+      <AdminHeader current="posts" newHref="/admin/new" newLabel="+ Шинэ бичвэр" />
 
       {posts.length === 0 ? (
         <p className="empty">Одоогоор бичвэр алга. «Шинэ бичвэр» дээр дарж эхний бичвэрээ нэмээрэй.</p>
