@@ -14,7 +14,6 @@ export const metadata: Metadata = {
   description: site.description,
   openGraph: { siteName: site.name, type: "website", locale: "mn_MN" },
   alternates: { types: { "application/rss+xml": "/feed.xml" } },
-  icons: { icon: site.avatar },
 };
 
 // Хуудас ачаалахаас өмнө theme-ийг тохируулж, гэрэлтэх (flash) явдлаас сэргийлнэ.
@@ -46,7 +45,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 {l.label}
               </a>
             ))}
-            <a href="/feed.xml">RSS</a>
           </nav>
         </footer>
       </body>
